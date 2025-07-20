@@ -1,58 +1,57 @@
 const Express = require("express");
+const jwt = require("jsonwebtoken");
 
 const app = Express();
 
-let users = {
-  1: {
-    id: "1",
-    name: "john doe",
-  },
-  2: {
-    id: "2",
-    name: "dave smith",
-  },
-};
-
-let messages = {
-  1: {
-    id: "1",
-    text: "hello world",
-    userid: "1",
-  },
-  2: {
-    id: "2",
-    text: "by world",
-    userid: "2",
-  },
-};
-
-app.get("/users", (req, res) => {
-  return res.send(Object.values(users));
+app.get("/api", (req, res) => {
+  res.json({
+    message: "welcome to api route",
+  });
 });
 
-app.get("/users/:userId", (req, res) => {
-  return res.send(Object.values(users[req.params.userId]));
+app.post("/api/posts", verifyToken, (req, res) => {
+  jwt.verify(req.token, "secret", (err, authData) => {
+    if (err) {
+      res.sendStatus(403);
+    } else {
+      res.json({
+        message: "post cvreated",
+        authData,
+      });
+    }
+  });
 });
 
-app.get("/messages", (req, res) => {
-  return res.send(Object.values(messages));
+app.post("/api/login", (req, res) => {
+  //user
+  const user = {
+    id: 1,
+    username: "dave",
+    email: "dave@gmail.com",
+  };
+
+  jwt.sign({ user: user }, "secret", (err, token) => {
+    res.json({
+      token,
+    });
+  });
 });
 
-app.get("/messages/:messageId", (req, res) => {
-  return res.send(messages[req.params.messageId]);
-});
+function verifyToken(req, res, next) {
+  const bearerHeader = req.headers["authorization"];
 
-app.post("/", (req, res) => {
-  return res.send("recieved a POST http request \n");
-});
+  if (typeof bearerHeader !== "undefined") {
+    const bearer = bearerHeader.split(" ");
 
-app.put("/user/:userid", (req, res) => {
-  return res.send(`Received a PUT HTTP method on ${req.params.userid} \n`);
-});
+    const bearerToken = bearer[1];
 
-app.delete("/", (req, res) => {
-  return res.send("Received a DELETE HTTP method \n");
-});
+    req.token = bearerToken;
+
+    next();
+  } else {
+    res.sendStatus(403);
+  }
+}
 
 app.listen(3000, () => {
   console.log("app running on port 3000");
